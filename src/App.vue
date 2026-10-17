@@ -1,12 +1,18 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useTaskStore } from './stores/taskStore'
 import TaskForm from './components/TaskForm.vue'
-import TaskItem from './components/TaskItem.vue'
+import TaskFilter from './components/TaskFilter.vue'
+import TaskList from './components/TaskList.vue'
 
 const store = useTaskStore()
 const editingId = ref(null)
 const editingTask = computed(() => store.tasks.find((t) => t.id === editingId.value) ?? null)
+
+// Perbarui waktu sekarang tiap 30 detik; dihentikan saat komponen dilepas.
+let timer
+onMounted(() => { timer = setInterval(store.tick, 30000) })
+onUnmounted(() => clearInterval(timer))
 
 function save(data) {
   if (editingId.value) {
@@ -18,10 +24,9 @@ function save(data) {
 }
 
 function remove(id) {
-  if (confirm('Hapus tugas ini?')) {
-    if (editingId.value === id) editingId.value = null
-    store.removeTask(id)
-  }
+  if (!confirm('Hapus tugas ini?')) return
+  if (editingId.value === id) editingId.value = null
+  store.removeTask(id)
 }
 </script>
 
@@ -37,42 +42,24 @@ function remove(id) {
 
     <TaskForm :task="editingTask" @save="save" @cancel="editingId = null" />
 
-    <section class="filters">
-      <label>
-        Mata kuliah
-        <select v-model="store.filterCourse">
-          <option value="">Semua</option>
-          <option v-for="c in store.courses" :key="c" :value="c">{{ c }}</option>
-        </select>
-      </label>
-      <label>
-        Status
-        <select v-model="store.filterStatus">
-          <option value="semua">Semua</option>
-          <option value="belum">Belum selesai</option>
-          <option value="terlambat">Terlambat</option>
-          <option value="selesai">Selesai</option>
-        </select>
-      </label>
-    </section>
+    <TaskFilter
+      v-model:course="store.filterCourse"
+      v-model:status="store.filterStatus"
+      :courses="store.courses"
+    />
 
-    <ul v-if="store.visibleTasks.length" class="list">
-      <TaskItem
-        v-for="t in store.visibleTasks"
-        :key="t.id"
-        :task="t"
-        :status="store.statusOf(t)"
-        :now="store.now"
-        @toggle="store.toggleDone"
-        @edit="editingId = $event"
-        @remove="remove"
-      />
-    </ul>
-    <p v-else class="empty">Belum ada tugas yang cocok. Tambahkan tugas pertamamu lewat form di atas.</p>
+    <TaskList
+      :tasks="store.visibleTasks"
+      :now="store.now"
+      @toggle="store.toggleDone"
+      @edit="editingId = $event"
+      @remove="remove"
+    />
   </main>
 </template>
 
 <style>
+/* Gaya global sederhana untuk semua komponen. */
 :root {
   --bg: #f7f6f2;
   --card: #ffffff;
@@ -93,23 +80,16 @@ h1 { margin: 0 0 4px; font-size: 1.6rem; }
 h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .summary { margin: 0 0 20px; color: var(--muted); }
 
-.form, .filters, .item {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
+.form, .filters, .item { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
 .form { padding: 16px; display: grid; gap: 12px; margin-bottom: 20px; }
 .filters { padding: 12px 16px; display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-label { display: grid; gap: 4px; font-size: 0.9rem; flex: 1; min-width: 160px; }
+label { display: grid; gap: 4px; font-size: 0.9rem; flex: 1; min-width: 160px; align-content: start; }
 input[type='text'], input[type='datetime-local'], select, textarea {
   font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff;
 }
-.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .err { color: var(--late); }
-button {
-  font: inherit; padding: 6px 12px; border: 1px solid var(--line);
-  border-radius: 6px; background: #fff; cursor: pointer;
-}
+button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
@@ -131,4 +111,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .item.terlambat .badge { color: var(--late); }
 .item.selesai .badge { color: var(--done); }
 .empty { color: var(--muted); text-align: center; padding: 24px 0; }
+
+@media (max-width: 520px) {
+  .item { flex-wrap: wrap; }
+  .side { justify-items: start; width: 100%; }
+}
 </style>
