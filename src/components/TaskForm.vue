@@ -45,24 +45,48 @@ function submit() {
 <template>
   <form class="form" novalidate @submit.prevent="submit">
     <h2>{{ task ? 'Edit tugas' : 'Tambah tugas' }}</h2>
-
-    <label>
-      Judul tugas
-      <input v-model="form.title" type="text" placeholder="Tugas I proposal" />
-      <small v-if="errors.title" class="err">{{ errors.title }}</small>
-    </label>
-
-    <label>
-      Mata kuliah
-      <input v-model="form.course" type="text" placeholder="Pengembangan Aplikasi Berbasis Web" />
-      <small v-if="errors.course" class="err">{{ errors.course }}</small>
-    </label>
+    <!-- DIUBAH: keterangan tanda wajib; tanda * disembunyikan dari pembaca layar, aria-required menggantikannya -->
+    <p class="hint"><span class="req" aria-hidden="true">*</span> wajib diisi</p>
 
     <div class="row">
       <label>
-        Tenggat
-        <input v-model="form.deadline" type="datetime-local" />
-        <small v-if="errors.deadline" class="err">{{ errors.deadline }}</small>
+        <span>Judul tugas <span class="req" aria-hidden="true">*</span></span>
+        <input
+          v-model="form.title"
+          type="text"
+          placeholder="Tugas I proposal"
+          aria-required="true"
+          :aria-invalid="errors.title ? 'true' : null"
+          :aria-describedby="errors.title ? 'err-title' : null"
+        />
+        <small v-if="errors.title" id="err-title" class="err" role="alert">{{ errors.title }}</small>
+      </label>
+
+      <label>
+        <span>Mata kuliah <span class="req" aria-hidden="true">*</span></span>
+        <input
+          v-model="form.course"
+          type="text"
+          placeholder="Pengembangan Aplikasi Berbasis Web"
+          aria-required="true"
+          :aria-invalid="errors.course ? 'true' : null"
+          :aria-describedby="errors.course ? 'err-course' : null"
+        />
+        <small v-if="errors.course" id="err-course" class="err" role="alert">{{ errors.course }}</small>
+      </label>
+    </div>
+
+    <div class="row">
+      <label>
+        <span>Tenggat <span class="req" aria-hidden="true">*</span></span>
+        <input
+          v-model="form.deadline"
+          type="datetime-local"
+          aria-required="true"
+          :aria-invalid="errors.deadline ? 'true' : null"
+          :aria-describedby="errors.deadline ? 'err-deadline' : null"
+        />
+        <small v-if="errors.deadline" id="err-deadline" class="err" role="alert">{{ errors.deadline }}</small>
       </label>
       <label>
         Prioritas

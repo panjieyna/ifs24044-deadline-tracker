@@ -75,13 +75,19 @@ function remove(id) {
           v-model:status="store.filterStatus"
           :courses="store.courses"
         />
-        <TaskList
-          :tasks="store.visibleTasks"
-          :now="store.now"
-          @toggle="store.toggleDone"
-          @edit="startEdit"
-          @remove="remove"
-        />
+        <p class="count">
+          Menampilkan {{ store.visibleTasks.length }} dari {{ store.tasks.length }} tugas
+        </p>
+        <!-- DIUBAH: daftar punya area gulir sendiri; tabindex agar bisa digulir dengan keyboard -->
+        <div class="list-scroll" role="region" aria-label="Daftar tugas" tabindex="0">
+          <TaskList
+            :tasks="store.visibleTasks"
+            :now="store.now"
+            @toggle="store.toggleDone"
+            @edit="startEdit"
+            @remove="remove"
+          />
+        </div>
       </section>
     </div>
   </main>
@@ -135,16 +141,38 @@ h2 { margin: 0 0 16px; font-size: 1.25rem; }
 .stat-late { background: var(--late-bg); border-color: var(--late-line); } /* tinted bila ada yang terlambat */
 
 /* Tata letak dua kolom */
-.layout { display: grid; grid-template-columns: minmax(340px, 400px) 1fr; gap: 28px; align-items: start; }
+.layout { display: grid; grid-template-columns: minmax(340px, 400px) 1fr; gap: 28px; align-items: stretch; }
 .col-list { display: grid; gap: 16px; min-width: 0; }
 
-/* Form tetap terlihat saat daftar digulir, hanya bila layar cukup tinggi */
-@media (min-width: 960px) and (min-height: 760px) {
-  .col-form { position: sticky; top: 24px; }
+/* DIUBAH: di layar lebar, kedua kolom dikunci setinggi layar sehingga selalu sejajar,
+   berapa pun jumlah tugasnya. Daftar menggulir di dalam panelnya. */
+@media (min-width: 960px) {
+  .layout { height: 560px; } /* cadangan untuk layar sangat pendek: halaman boleh menggulir */
+  .col-form, .col-list { min-height: 0; }
+  .col-form .form { height: 100%; overflow-y: auto; } /* form menggulir sendiri jika layar pendek */
+  .col-list { grid-template-rows: auto auto minmax(0, 1fr); }
+}
+
+/* DIUBAH: pada layar cukup tinggi, halaman dikunci setinggi layar sehingga tidak ada
+   scrollbar halaman. Kolom mengisi sisa tinggi; yang menggulir hanya form dan daftar. */
+@media (min-width: 960px) and (min-height: 640px) {
+  body { overflow: hidden; }
+  .page {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 24px;
+  }
+  .top { flex: none; }
+  .layout { flex: 1; height: auto; min-height: 0; }
 }
 
 .form, .filters, .item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
-.form { padding: 22px; display: grid; gap: 16px; }
+.form { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+/* Catatan (label langsung di dalam form) mengisi sisa tinggi agar tidak ada ruang kosong */
+.form > label { grid-template-rows: auto 1fr; }
+.form > label textarea { height: 100%; min-height: 90px; resize: none; }
 .filters { padding: 16px 20px; display: flex; gap: 16px; flex-wrap: wrap; }
 label { display: grid; gap: 6px; font-size: 1rem; font-weight: 500; flex: 1; min-width: 200px; align-content: start; }
 .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
@@ -185,14 +213,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 .actions { display: flex; gap: 10px; }
+.form .actions button { flex: 1; }
+.req { color: var(--late); margin-left: 2px; }
+.hint { margin: -8px 0 0; font-size: 0.9rem; color: var(--muted); }
 
 /* Daftar tugas: kartu lebih besar dan lega */
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-.item { display: flex; gap: 16px; padding: 18px 20px; border-left-width: 6px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.item { display: flex; gap: 14px; padding: 12px 16px; border-left-width: 6px; }
 .item input[type='checkbox'] { width: 26px; height: 26px; flex: none; margin: 2px 0 0; accent-color: var(--accent); }
 .body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.title { margin: 0; font-size: 1.15rem; font-weight: 600; }
+.title { margin: 0; font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
 .meta, .note { margin: 6px 0 0; font-size: 0.95rem; color: var(--muted); }
+.meta-line { margin: 2px 0 0; font-size: 0.95rem; }
+.meta-line .course { font-weight: 600; }
+.meta-line .sep { color: var(--muted); margin: 0 6px; }
+.note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-row { margin: 8px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip-row .chip { margin-right: 0; }
 
 .chip {
   display: inline-block; margin-right: 8px; padding: 2px 10px;
@@ -202,7 +239,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .chip-sedang { background: #eceae2; color: var(--ink); }
 .chip-tinggi { background: var(--ink); border-color: var(--ink); color: #fff; }
 
-.side { display: grid; gap: 10px; justify-items: end; align-content: start; }
+.side { display: grid; gap: 8px; justify-items: end; align-content: space-between; }
+.item button { min-height: 36px; padding: 4px 14px; font-size: 0.95rem; }
 .badge {
   padding: 3px 12px; border-radius: 999px; white-space: nowrap;
   font-size: 0.9rem; font-weight: 600;
@@ -212,6 +250,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 /* Tiga status, tiga warna: belum selesai (biru), terlambat (merah), selesai (hijau). */
 .item.belum { background: var(--todo-bg); border-color: var(--todo-line); border-left-color: var(--accent); }
 .item.belum .badge { background: var(--accent); color: #fff; }
+.item.urgent { border-left-color: #c98a00; }  /* sisa waktu < 24 jam: garis kiri jingga */
+.remain-urgent {
+  background: #fff1cc; color: #6b4200; border: 1px solid #e0b84a;
+  border-radius: 999px; padding: 2px 10px; font-weight: 700;
+}
 
 .item.terlambat { background: var(--late-bg); border-color: var(--late-line); border-left-color: var(--late); }
 .item.terlambat .badge { background: var(--late); color: #fff; }
@@ -220,6 +263,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .item.selesai { background: var(--done-card); border-color: var(--done-line); border-left-color: var(--done-edge); }
 .item.selesai .title { text-decoration: line-through; color: var(--muted); }
 .item.selesai .badge { background: var(--done); color: #fff; }
+
+@media (min-width: 960px) {
+  .list-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-right: -8px;
+    overscroll-behavior: contain;
+  }
+}
+.list-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 10px; }
+.count { margin: 0; font-size: 0.9rem; color: var(--muted); }
 
 .empty { color: var(--muted); text-align: center; padding: 40px 0; font-size: 1.05rem; }
 
@@ -230,7 +285,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* Layar sentuh dan ponsel: area tekan minimal 44px */
 @media (pointer: coarse), (max-width: 520px) {
-  button { min-height: 44px; }
+  button, .item button { min-height: 44px; }
 }
 @media (max-width: 520px) {
   .page { padding: 20px 14px 56px; }
